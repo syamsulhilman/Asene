@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         open: "18:00",
         close: "17:00",
         isOpen: true,
-        manualOverride: false
+        manualOverride: true
     };
 
     // Theme settings
