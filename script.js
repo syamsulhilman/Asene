@@ -28,8 +28,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Store hours and status
     let storeHours = {
-        open: "18:00",
-        close: "17:00",
+        open: "08:00",
+        close: "18:00",
         isOpen: true,
         manualOverride: false
     };
