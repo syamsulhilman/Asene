@@ -9,7 +9,7 @@ let menuItems = [
     { id: 5, name: "Tumis Pare", price: 12000, available: true, image: "https://images.unsplash.com/photo-1591798450997-9a0d8f1c5c78?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Tumis pare dengan campuran udang dan bumbu balado" },
     { id: 6, name: "Tumis Jengkol", price: 18000, available: true, image: "https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Tumis jengkol dengan balado cabai merah" },
     { id: 7, name: "Tumis Daun Paya", price: 10000, available: true, image: "https://images.unsplash.com/photo-1547516505-4d3d4c0f9c7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Tumis daun paya dengan ikan teri dan cabai" },
-    { id: 8, name: "Tumis Labu", price: 10000, available: true, image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?ixlib=rb-4.0.3&auto=format&fit=c crop&w=500&q=80", description: "Tumis labu siam dengan ebi dan cabai" },
+    { id: 8, name: "Tumis Labu", price: 10000, available: true, image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Tumis labu siam dengan ebi dan cabai" },
     { id: 9, name: "Terong Balado", price: 12000, available: true, image: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Terong ungu balado dengan cabai merah giling" },
     { id: 10, name: "Soun", price: 15000, available: true, image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Soun goreng dengan sayuran dan daging ayam" },
     { id: 11, name: "Semur Jengkol", price: 20000, available: true, image: "https://images.unsplash.com/photo-1589302168068-964664b929eb?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Semur jengkol dengan bumbu kecap manis" },
@@ -21,7 +21,7 @@ let menuItems = [
     { id: 17, name: "Gorengan Tempe", price: 5000, available: true, image: "https://images.unsplash.com/photo-1574484284002-952d92456975?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Tempe goreng tepung crispy" },
     { id: 18, name: "Gorengan Bakwan", price: 5000, available: true, image: "https://images.unsplash.com/photo-1612927601601-6638404737ce?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Bakwan sayur renyah" },
     { id: 19, name: "Gorengan Tahu Bakso", price: 7000, available: true, image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Tahu isi bakso goreng" },
-    { id: 20, name: "Sambal", price: 3000, available: true, image: "https://images.unsplash.com/photo-1518843875459-f738682238a6?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Sambal terasi pedas" },
+    { id: 20, name: "Sambal", price: 3000, available: true, image: "https://images.unsplash.com/photo-1518843875459-f738682238a6?ixlib=rb-4.0.3&auto=format&fit=c crop&w=500&q=80", description: "Sambal terasi pedas" },
     { id: 21, name: "Nasi", price: 5000, available: true, image: "https://images.unsplash.com/photo-1546549032-9571cd6b27df?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Nasi putih hangat" }
 ];
 
@@ -214,7 +214,7 @@ function updateStoreUI(isOpen) {
     hoursDisplay.textContent = `${storeHours.open} - ${storeHours.close}`;
     footerHours.textContent = `Senin - Minggu: ${storeHours.open} - ${storeHours.close}`;
     
-    // Render ulang menu untuk update status tombol
+    // Update menu items based on store status
     renderMenu();
     updateCheckoutButton();
 }
@@ -234,7 +234,7 @@ function renderMenu() {
                 <h3 class="menu-item-title">${item.name}</h3>
                 <p class="menu-item-desc">${item.description}</p>
                 <p class="menu-item-price">Rp ${item.price.toLocaleString('id-ID')}</p>
-                <button class="add-to-cart" data-id="${item.id}" ${!item.available ? 'disabled' : ''}>
+                <button class="add-to-cart" data-id="${item.id}" ${!item.available || (!storeHours.isOpen && !isAdminMode) ? 'disabled' : ''}>
                     ${item.available ? 'Tambah ke Keranjang' : 'Habis'}
                 </button>
             </div>
@@ -242,10 +242,11 @@ function renderMenu() {
         menuGrid.appendChild(menuItemEl);
     });
     
-    // Add event listeners to add-to-cart buttons using event delegation
-    menuGrid.addEventListener('click', function(e) {
-        if (e.target.classList.contains('add-to-cart')) {
-            const id = parseInt(e.target.dataset.id);
+    // Add event listeners to add-to-cart buttons
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const id = parseInt(this.dataset.id);
             const item = menuItems.find(item => item.id === id);
             const isAdminMode = adminPanel.style.display === 'block';
             
@@ -254,22 +255,22 @@ function renderMenu() {
             } else if (!storeHours.isOpen && !isAdminMode) {
                 showNotification('Toko sedang tutup. Tidak dapat menambah item ke keranjang.');
             }
-        }
+        });
     });
 }
 
-// Add item to cart
+// Add item to cart (FIXED: Only add one item at a time)
 function addToCart(item) {
     const existingItem = cart.find(cartItem => cartItem.id === item.id);
     
     if (existingItem) {
-        existingItem.quantity++;
+        existingItem.quantity += 1; // Only add one at a time
     } else {
         cart.push({
             id: item.id,
             name: item.name,
             price: item.price,
-            quantity: 1
+            quantity: 1 // Always start with quantity 1
         });
     }
     
@@ -307,10 +308,10 @@ function updateCart() {
             cartItems.appendChild(cartItemEl);
         });
         
-        // Add event listeners to quantity buttons using event delegation
-        cartItems.addEventListener('click', function(e) {
-            if (e.target.classList.contains('minus') || e.target.parentElement.classList.contains('minus')) {
-                const id = parseInt(e.target.dataset.id || e.target.parentElement.dataset.id);
+        // Add event listeners to quantity buttons
+        document.querySelectorAll('.quantity-btn.minus').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
                 const item = cart.find(item => item.id === id);
                 
                 if (item.quantity > 1) {
@@ -320,16 +321,24 @@ function updateCart() {
                 }
                 
                 updateCart();
-            } else if (e.target.classList.contains('plus') || e.target.parentElement.classList.contains('plus')) {
-                const id = parseInt(e.target.dataset.id || e.target.parentElement.dataset.id);
+            });
+        });
+        
+        document.querySelectorAll('.quantity-btn.plus').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
                 const item = cart.find(item => item.id === id);
                 item.quantity++;
                 updateCart();
-            } else if (e.target.classList.contains('remove-item') || e.target.parentElement.classList.contains('remove-item')) {
-                const id = parseInt(e.target.dataset.id || e.target.parentElement.dataset.id);
+            });
+        });
+        
+        document.querySelectorAll('.remove-item').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
                 cart = cart.filter(item => item.id !== id);
                 updateCart();
-            }
+            });
         });
     }
     
@@ -439,30 +448,39 @@ function renderOrders() {
         orderList.appendChild(orderEl);
     });
     
-    // Add event listeners to order action buttons using event delegation
-    orderList.addEventListener('click', function(e) {
-        if (e.target.classList.contains('complete-order')) {
-            const id = parseInt(e.target.dataset.id);
+    // Add event listeners to order action buttons
+    document.querySelectorAll('.complete-order').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
             const order = orders.find(order => order.id === id);
             if (order) {
                 order.status = 'completed';
                 saveToLocalStorage();
                 renderOrders();
             }
-        } else if (e.target.classList.contains('cancel-order')) {
-            const id = parseInt(e.target.dataset.id);
+        });
+    });
+    
+    document.querySelectorAll('.cancel-order').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
             orders = orders.filter(order => order.id !== id);
             saveToLocalStorage();
             renderOrders();
-        } else if (e.target.classList.contains('delete-order')) {
-            const id = parseInt(e.target.dataset.id);
+        });
+    });
+
+    // Add event listeners to delete order buttons
+    document.querySelectorAll('.delete-order').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
             if (confirm('Apakah Anda yakin ingin menghapus pesanan ini?')) {
                 orders = orders.filter(order => order.id !== id);
                 saveToLocalStorage();
                 renderOrders();
                 showNotification('Pesanan berhasil dihapus');
             }
-        }
+        });
     });
 }
 
@@ -485,22 +503,22 @@ function renderAdminMenu() {
         menuTableBody.appendChild(row);
     });
     
-    // Add event listeners to admin menu controls using event delegation
-    menuTableBody.addEventListener('change', function(e) {
-        if (e.target.classList.contains('availability-checkbox')) {
-            const id = parseInt(e.target.dataset.id);
+    // Add event listeners to admin menu controls
+    document.querySelectorAll('.availability-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const id = parseInt(this.dataset.id);
             const item = menuItems.find(item => item.id === id);
             if (item) {
-                item.available = e.target.checked;
+                item.available = this.checked;
                 saveToLocalStorage();
                 renderMenu();
             }
-        }
+        });
     });
     
-    menuTableBody.addEventListener('click', function(e) {
-        if (e.target.classList.contains('save-menu')) {
-            const id = parseInt(e.target.dataset.id);
+    document.querySelectorAll('.save-menu').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
             const item = menuItems.find(item => item.id === id);
             if (item) {
                 const nameInput = document.querySelector(`.menu-name-input[data-id="${id}"]`);
@@ -518,15 +536,19 @@ function renderAdminMenu() {
                 renderMenu();
                 showNotification('Menu berhasil disimpan');
             }
-        } else if (e.target.classList.contains('delete-menu')) {
-            const id = parseInt(e.target.dataset.id);
+        });
+    });
+    
+    document.querySelectorAll('.delete-menu').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
             if (confirm('Apakah Anda yakin ingin menghapus menu ini?')) {
                 menuItems = menuItems.filter(item => item.id !== id);
                 saveToLocalStorage();
                 renderMenu();
                 renderAdminMenu();
             }
-        }
+        });
     });
 }
 
