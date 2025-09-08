@@ -1,3 +1,5 @@
+
+</body>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -21,7 +23,7 @@
                     <span class="status-badge" id="statusBadge">BUKA</span>
                     <a href="#" class="admin-link" id="adminToggle">
                         <i class="fas fa-user-cog"></i>
-                        <span>Mode Kasir</span>
+                        <span>Kasir</span>
                     </a>
                     <button class="admin-link" id="themeToggle">
                         <i class="fas fa-moon"></i>
@@ -37,7 +39,7 @@
         <div class="closed-message">
             <h2><i class="fas fa-store-slash"></i> Toko Sedang Tutup</h2>
             <p>Maaf, ARSENE'S KITCHEN sedang tutup saat ini. Silakan kembali pada jam operasional kami.</p>
-            <p>Jam Operasional: <span id="hoursDisplay">18:00 - 17:00</span></p>
+            <p>Jam Operasional: <span id="hoursDisplay">08:00 - 18:00</span></p>
             <div id="adminAccessBtn">
                 <a href="#" class="admin-link" id="adminAccessButton">
                     <i class="fas fa-user-cog"></i>
@@ -87,26 +89,30 @@
 
         <div class="admin-content" id="menuContent">
             <h3>Kelola Menu</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Tersedia</th>
-                        <th>Nama Menu</th>
-                        <th>Deskripsi</th>
-                        <th>Harga</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="menuTableBody">
-                    <!-- Menu items will be displayed here -->
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tersedia</th>
+                            <th>Nama Menu</th>
+                            <th>Gambar (URL)</th>
+                            <th>Harga</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="menuTableBody">
+                        <!-- Menu items will be displayed here -->
+                    </tbody>
+                </table>
+            </div>
             
-            <div class="add-menu-form">
+            <button class="btn btn-primary toggle-form-btn" id="toggleMenuForm">Tampilkan Form Tambah Menu</button>
+            
+            <div class="add-menu-form" id="addMenuForm">
                 <h4>Tambah Menu Baru</h4>
                 <div class="form-row">
                     <input type="text" id="newMenuName" placeholder="Nama Menu">
-                    <input type="text" id="newMenuDesc" placeholder="Deskripsi Menu">
+                    <input type="text" id="newMenuImage" placeholder="URL Gambar Menu">
                     <input type="number" id="newMenuPrice" placeholder="Harga">
                 </div>
                 <button class="btn btn-primary" id="addMenuBtn">Tambah Menu</button>
@@ -169,15 +175,6 @@
     <!-- Main Content -->
     <div class="container" id="mainContent">
         <div class="main-content">
-            <!-- Menu Section -->
-            <section class="menu-section">
-                <h2>Daftar Menu</h2>
-                
-                <div class="menu-grid" id="menuGrid">
-                    <!-- Menu items will be displayed here -->
-                </div>
-            </section>
-
             <!-- Cart Section -->
             <section class="cart-section">
                 <h2><i class="fas fa-shopping-cart"></i> Keranjang Pesanan</h2>
@@ -190,16 +187,41 @@
                 
                 <div class="cart-items" id="cartItems">
                     <div class="empty-cart">
-                        <i class="fas fa-shopping-cart" style="font-size: 3rem; margin-bottom: 10px;"></i>
+                        <i class="fas fa-shopping-cart"></i>
                         <p>Keranjang belanja Anda kosong</p>
                     </div>
                 </div>
+                
                 <div class="cart-summary">
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span id="subtotal">Rp 0</span>
+                    </div>
+                    <div class="summary-row discount-row" id="discountRow" style="display: none;">
+                        <span>Diskon Member (5%)</span>
+                        <span id="discountAmount">-Rp 0</span>
+                    </div>
                     <div class="summary-row total">
                         <span>Total</span>
                         <span id="total">Rp 0</span>
                     </div>
+                    
+                    <div class="member-section">
+                        <button class="btn-member" id="memberBtn">
+                            <i class="fas fa-crown"></i> Member
+                        </button>
+                    </div>
+                    
                     <button class="checkout-btn" id="checkoutBtn" disabled>Pesan Sekarang</button>
+                </div>
+            </section>
+
+            <!-- Menu Section -->
+            <section class="menu-section">
+                <h2>Daftar Menu</h2>
+                
+                <div class="menu-list" id="menuList">
+                    <!-- Menu items will be displayed here -->
                 </div>
             </section>
         </div>
@@ -233,6 +255,19 @@
     <!-- Notification -->
     <div class="notification" id="notification">
         Item telah ditambahkan ke keranjang!
+    </div>
+
+    <!-- Order Success Modal -->
+    <div class="modal order-success-modal" id="orderSuccessModal">
+        <div class="modal-content">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2>Terima Kasih!</h2>
+            <p>Pesanan <span id="successCustomerName">Nama Pelanggan</span> telah berhasil diterima.</p>
+            <p>Total pesanan: <span id="successTotal">Rp 0</span></p>
+            <button class="btn btn-primary" id="closeSuccessModal">Tutup</button>
+        </div>
     </div>
 
     <script src="script.js"></script>
