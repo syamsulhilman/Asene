@@ -3,8 +3,8 @@ let cart = [];
 let orders = [];
 let isMember = false;
 let menuItems = [
-    { id: 1, name: "Ayam Bakar Potong", price: 25000, available: true, image: "https://images.unsplash.com/photo-1585032226651-759b368d7246?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Ayam bakar dengan bumbu spesial dipotong sesuai porsi" },
-    { id: 2, name: "Ayam Bakar Bakakak", price: 50000, available: true, image: "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Ayam bakar utuh dengan bumbu khas tradisional" },
+    { id: 1, name: "Ayam Bakar Potong", price: 15000, available: true, image: "https://images.unsplash.com/photo-1585032226651-759b368d7246?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Ayam bakar dengan bumbu spesial dipotong sesuai porsi" },
+    { id: 2, name: "Ayam Bakar Bakakak", price: 60000, available: true, image: "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Ayam bakar utuh dengan bumbu khas tradisional" },
     { id: 3, name: "Ayam Goreng", price: 22000, available: true, image: "https://images.unsplash.com/photo-1626645735466-3c6d9f6c8e6b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Ayam goreng dengan bumbu rempah pilihan" },
     { id: 4, name: "Lele Goreng", price: 15000, available: true, image: "https://images.unsplash.com/photo-1599484295427-2fe84c651a72?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Lele goreng renyah dengan sambal terasi" },
     { id: 5, name: "Tumis Pare", price: 12000, available: true, image: "https://images.unsplash.com/photo-1591798450997-9a0d8f1c5c78?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80", description: "Tumis pare dengan campuran udang dan bumbu balado" },
