@@ -147,6 +147,7 @@ function init() {
     updateStoreStatus();
     setDefaultReportDates();
     applyTheme();
+    localStorage.removeItem('arsenesMenu');
     
     // Check if we were in admin mode
     if (isAdminMode) {
