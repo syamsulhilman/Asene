@@ -305,7 +305,17 @@
             <p><strong>Broker:</strong> <span id="mqttBrokerInfo">wss://broker.hivemq.com:8884/mqtt</span></p>
             <p><strong>Topik:</strong> <span id="mqttTopicInfo">arsenes_kitchen/orders</span></p>
         </div>
-        <div class="modal-actions">
+        
+        <div class="form-row">
+            <input type="text" id="serverPollUrl" placeholder="Server poll URL (optional, contoh: https://example.com/api/orders/latest)" value="">
+            <input type="number" id="serverPollInterval" placeholder="Interval detik (default 5)" value="5" min="1" style="width:140px;">
+        </div>
+        <div class="form-row">
+            <button class="btn btn-primary" id="startServerPollBtn">Start Poll Server</button>
+            <button class="btn btn-secondary" id="stopServerPollBtn" style="display:none;">Stop Poll Server</button>
+            <span id="serverPollStatus" style="margin-left:12px;color:var(--muted);">Idle</span>
+        </div>
+<div class="modal-actions">
             <button class="btn btn-primary" id="mqttReconnectBtn">Coba Hubungkan Kembali</button>
             <button class="btn btn-secondary" id="mqttCloseBtn">Tutup</button>
         </div>
@@ -316,4 +326,4 @@
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="script.js"></script>
 </body>
-                    </html>
+</html>
