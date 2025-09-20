@@ -1,14 +1,13 @@
-
-</body>
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>ARSENE'S KITCHEN</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Header -->
@@ -70,7 +69,14 @@
     <div class="container admin-panel" id="adminPanel">
         <div class="admin-header">
             <h2>Panel Admin Kasir</h2>
-            <button class="btn btn-secondary" id="closeAdmin">Kembali ke Mode Konsumen</button>
+
+            <!-- PRINTER CONTROLS -->
+            <div class="printer-controls">
+                <button id="connectPrinterBtn" class="btn btn-success"><i class="fas fa-plug"></i> Connect Printer</button>
+                <button id="disconnectPrinterBtn" class="btn btn-danger" style="display:none;"><i class="fas fa-unlink"></i> Disconnect</button>
+                <span id="printerStatus" class="printer-status">Tidak Terhubung</span>
+                <button class="btn btn-secondary" id="closeAdmin">Kembali ke Mode Konsumen</button>
+            </div>
         </div>
 
         <div class="admin-tabs">
@@ -78,6 +84,7 @@
             <div class="admin-tab" data-tab="menu">Kelola Menu</div>
             <div class="admin-tab" data-tab="hours">Jam Operasional</div>
             <div class="admin-tab" data-tab="reports">Laporan</div>
+            <div class="admin-tab" data-tab="realtime">Realtime</div>
         </div>
 
         <div class="admin-content active" id="ordersContent">
@@ -90,7 +97,7 @@
         <div class="admin-content" id="menuContent">
             <h3>Kelola Menu</h3>
             <div class="table-responsive">
-                <table>
+                <table class="menu-table">
                     <thead>
                         <tr>
                             <th>Tersedia</th>
@@ -100,15 +107,13 @@
                             <th>Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="menuTableBody">
-                        <!-- Menu items will be displayed here -->
-                    </tbody>
+                    <tbody id="menuTableBody"></tbody>
                 </table>
             </div>
-            
+
             <button class="btn btn-primary toggle-form-btn" id="toggleMenuForm">Tampilkan Form Tambah Menu</button>
-            
-            <div class="add-menu-form" id="addMenuForm">
+
+            <div class="add-menu-form" id="addMenuForm" style="display: none;">
                 <h4>Tambah Menu Baru</h4>
                 <div class="form-row">
                     <input type="text" id="newMenuName" placeholder="Nama Menu">
@@ -130,7 +135,7 @@
                 </div>
                 <button class="btn btn-primary" id="saveHoursBtn">Simpan Jam Operasional</button>
             </div>
-            
+
             <h3>Status Toko</h3>
             <div class="hours-config">
                 <p>Status saat ini: <strong id="currentStatus">Buka</strong></p>
@@ -141,7 +146,7 @@
 
         <div class="admin-content" id="reportsContent">
             <h3>Laporan Pendapatan</h3>
-            
+
             <div class="report-filters">
                 <div class="form-row">
                     <input type="date" id="reportStartDate">
@@ -149,7 +154,7 @@
                     <button class="btn btn-primary" id="generateReportBtn">Generate Laporan</button>
                 </div>
             </div>
-            
+
             <div class="report-summary">
                 <div class="report-card">
                     <h3>Total Pendapatan</h3>
@@ -164,10 +169,31 @@
                     <div class="value" id="averageOrder">Rp 0</div>
                 </div>
             </div>
-            
+
             <h4>Detail Pesanan</h4>
-            <div class="order-list" id="reportOrderList">
-                <!-- Report orders will be displayed here -->
+            <div class="order-list" id="reportOrderList"></div>
+        </div>
+
+        <div class="admin-content" id="realtimeContent">
+            <h3>Panel Realtime MQTT</h3>
+            <div class="mqtt-controls">
+                <button id="connectMqttBtn" class="btn btn-success"><i class="fas fa-plug"></i> Connect MQTT</button>
+                <button id="disconnectMqttBtn" class="btn btn-danger" style="display:none;"><i class="fas fa-unlink"></i> Disconnect</button>
+                <span id="mqttStatus" class="printer-status">Tidak Terhubung</span>
+            </div>
+
+            <div class="mqtt-config">
+                <h4>Konfigurasi MQTT</h4>
+                <div class="form-row">
+                    <input type="text" id="mqttTopic" placeholder="Topik MQTT" value="arsenes_kitchen/orders">
+                    <input type="text" id="mqttBroker" placeholder="Broker URL" value="wss://broker.hivemq.com:8884/mqtt">
+                </div>
+                <button class="btn btn-primary" id="saveMqttConfig">Simpan Konfigurasi</button>
+            </div>
+
+            <h4>Log Pesanan Real-time</h4>
+            <div class="mqtt-log" id="mqttLog">
+                <div class="log-entry">Menunggu koneksi MQTT...</div>
             </div>
         </div>
     </div>
@@ -178,40 +204,40 @@
             <!-- Cart Section -->
             <section class="cart-section">
                 <h2><i class="fas fa-shopping-cart"></i> Keranjang Pesanan</h2>
-                
+
                 <div class="customer-info">
                     <h3>Data Pelanggan</h3>
                     <input type="text" id="customerName" placeholder="Nama Pelanggan">
                     <input type="tel" id="customerPhone" placeholder="Nomor Telepon">
                 </div>
-                
+
                 <div class="cart-items" id="cartItems">
                     <div class="empty-cart">
                         <i class="fas fa-shopping-cart"></i>
                         <p>Keranjang belanja Anda kosong</p>
                     </div>
                 </div>
-                
+
                 <div class="cart-summary">
                     <div class="summary-row">
                         <span>Subtotal</span>
                         <span id="subtotal">Rp 0</span>
                     </div>
                     <div class="summary-row discount-row" id="discountRow" style="display: none;">
-                        <span>Diskon Member (5%)</span>
+                        <span>Diskon Member</span>
                         <span id="discountAmount">-Rp 0</span>
                     </div>
                     <div class="summary-row total">
                         <span>Total</span>
                         <span id="total">Rp 0</span>
                     </div>
-                    
+
                     <div class="member-section">
                         <button class="btn-member" id="memberBtn">
                             <i class="fas fa-crown"></i> Member
                         </button>
                     </div>
-                    
+
                     <button class="checkout-btn" id="checkoutBtn" disabled>Pesan Sekarang</button>
                 </div>
             </section>
@@ -219,7 +245,8 @@
             <!-- Menu Section -->
             <section class="menu-section">
                 <h2>Daftar Menu</h2>
-                
+
+                <!-- LIST layout (seluruh mode) -->
                 <div class="menu-list" id="menuList">
                     <!-- Menu items will be displayed here -->
                 </div>
@@ -253,16 +280,12 @@
     </footer>
 
     <!-- Notification -->
-    <div class="notification" id="notification">
-        Item telah ditambahkan ke keranjang!
-    </div>
+    <div class="notification" id="notification">Item telah ditambahkan ke keranjang!</div>
 
     <!-- Order Success Modal -->
     <div class="modal order-success-modal" id="orderSuccessModal">
         <div class="modal-content">
-            <div class="success-icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
+            <div class="success-icon"><i class="fas fa-check-circle"></i></div>
             <h2>Terima Kasih!</h2>
             <p>Pesanan <span id="successCustomerName">Nama Pelanggan</span> telah berhasil diterima.</p>
             <p>Total pesanan: <span id="successTotal">Rp 0</span></p>
@@ -270,6 +293,8 @@
         </div>
     </div>
 
+    <!-- MQTT Script -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="script.js"></script>
 </body>
-</html>
+    </html>
