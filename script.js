@@ -926,8 +926,7 @@ adminTabs.forEach(tab => {
         });
         
         document.getElementById(tabId + 'Content').classList.add('active');
-        
-        // Generate report when switching to reports tab
+                // Generate report when switching to reports tab
         if (tabId === 'reports') {
             generateReport();
         }
@@ -952,9 +951,10 @@ newMenuPrice.addEventListener('keypress', function(e) {
 document.addEventListener('DOMContentLoaded', function() {
     init();
 });
-// MQTT Real-time functionality
+// MQTT Real-time functionality - Improved Version
 let mqttClient = null;
 let isMqttConnected = false;
+let mqttReconnectInterval = null;
 
 // DOM elements for MQTT
 const connectMqttBtn = document.getElementById('connectMqttBtn');
@@ -964,6 +964,13 @@ const mqttLog = document.getElementById('mqttLog');
 const mqttTopic = document.getElementById('mqttTopic');
 const mqttBroker = document.getElementById('mqttBroker');
 const saveMqttConfig = document.getElementById('saveMqttConfig');
+const mqttModal = document.getElementById('mqttModal');
+const mqttStatusIndicator = document.getElementById('mqttStatusIndicator');
+const mqttStatusText = document.getElementById('mqttStatusText');
+const mqttBrokerInfo = document.getElementById('mqttBrokerInfo');
+const mqttTopicInfo = document.getElementById('mqttTopicInfo');
+const mqttReconnectBtn = document.getElementById('mqttReconnectBtn');
+const mqttCloseBtn = document.getElementById('mqttCloseBtn');
 
 // Initialize MQTT
 function initMqtt() {
@@ -980,6 +987,37 @@ function initMqtt() {
     if (savedMqttStatus === 'connected') {
         connectMqtt();
     }
+    
+    // Set up event listeners
+    mqttReconnectBtn.addEventListener('click', function() {
+        connectMqtt();
+    });
+    
+    mqttCloseBtn.addEventListener('click', function() {
+        mqttModal.style.display = 'none';
+    });
+}
+
+// Show MQTT connection status modal
+function showMqttStatus() {
+    mqttModal.style.display = 'flex';
+    updateMqttStatusDisplay();
+}
+
+// Update MQTT status display
+function updateMqttStatusDisplay() {
+    if (isMqttConnected) {
+        mqttStatusIndicator.className = 'status-indicator status-connected';
+        mqttStatusText.textContent = 'Terhubung';
+        mqttStatusText.style.color = '#28a745';
+    } else {
+        mqttStatusIndicator.className = 'status-indicator status-disconnected';
+        mqttStatusText.textContent = 'Terputus';
+        mqttStatusText.style.color = '#dc3545';
+    }
+    
+    mqttBrokerInfo.textContent = mqttBroker.value;
+    mqttTopicInfo.textContent = mqttTopic.value;
 }
 
 // Connect to MQTT broker
@@ -987,22 +1025,50 @@ function connectMqtt() {
     const brokerUrl = mqttBroker.value;
     const topic = mqttTopic.value;
     
+    // Clear previous reconnect interval
+    if (mqttReconnectInterval) {
+        clearInterval(mqttReconnectInterval);
+        mqttReconnectInterval = null;
+    }
+    
+    // Update UI
+    mqttStatus.textContent = 'Menghubungkan...';
+    mqttStatus.style.color = '#ffc107';
+    connectMqttBtn.style.display = 'none';
+    disconnectMqttBtn.style.display = 'inline-block';
+    
+    showMqttStatus();
+    mqttStatusIndicator.className = 'status-indicator status-connecting';
+    mqttStatusText.textContent = 'Menghubungkan...';
+    mqttStatusText.style.color = '#ffc107';
+    
     try {
-        mqttClient = mqtt.connect(brokerUrl);
+        // Disconnect existing client
+        if (mqttClient) {
+            mqttClient.end();
+        }
+        
+        // Create new connection
+        mqttClient = mqtt.connect(brokerUrl, {
+            reconnectPeriod: 5000, // Try to reconnect every 5 seconds
+            connectTimeout: 10 * 1000, // 10 second timeout
+            clientId: 'arsenes_kitchen_' + Math.random().toString(16).substr(2, 8)
+        });
         
         mqttClient.on('connect', function() {
             isMqttConnected = true;
             mqttStatus.textContent = 'Terhubung';
             mqttStatus.style.color = 'var(--success)';
-            connectMqttBtn.style.display = 'none';
-            disconnectMqttBtn.style.display = 'inline-block';
             
             // Subscribe to topic
             mqttClient.subscribe(topic, function(err) {
                 if (!err) {
                     addToMqttLog('Terhubung ke broker dan subscribe topik: ' + topic);
+                    updateMqttStatusDisplay();
                 } else {
                     addToMqttLog('Error subscribe: ' + err.message);
+                    mqttStatus.textContent = 'Error Subscribe';
+                    mqttStatus.style.color = 'var(--danger)';
                 }
             });
             
@@ -1010,16 +1076,21 @@ function connectMqtt() {
         });
         
         mqttClient.on('message', function(topic, message) {
-            // message is Buffer
             const msg = message.toString();
             addToMqttLog('Pesan diterima: ' + msg);
             
-            // Try to parse as JSON
             try {
                 const orderData = JSON.parse(msg);
                 processIncomingOrder(orderData);
+                
+                // Show browser notification if available
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('Pesanan Baru', {
+                        body: `Pesanan dari ${orderData.customer || 'Pelanggan'} - Total: Rp ${orderData.total?.toLocaleString('id-ID') || '0'}`,
+                        icon: 'https://arsenes-kitchen.shop/favicon.ico'
+                    });
+                }
             } catch (e) {
-                // If not JSON, treat as plain text
                 showNotification('Pesanan baru: ' + msg);
             }
         });
@@ -1028,6 +1099,8 @@ function connectMqtt() {
             addToMqttLog('Error: ' + err.message);
             mqttStatus.textContent = 'Error';
             mqttStatus.style.color = 'var(--danger)';
+            isMqttConnected = false;
+            updateMqttStatusDisplay();
         });
         
         mqttClient.on('close', function() {
@@ -1038,15 +1111,35 @@ function connectMqtt() {
             connectMqttBtn.style.display = 'inline-block';
             disconnectMqttBtn.style.display = 'none';
             localStorage.setItem('arsenesMqttStatus', 'disconnected');
+            updateMqttStatusDisplay();
+            
+            // Try to reconnect automatically
+            if (!mqttReconnectInterval) {
+                mqttReconnectInterval = setInterval(function() {
+                    if (!isMqttConnected) {
+                        addToMqttLog('Mencoba menghubungkan kembali...');
+                        connectMqtt();
+                    }
+                }, 10000); // Try every 10 seconds
+            }
         });
         
     } catch (err) {
         addToMqttLog('Error koneksi: ' + err.message);
+        mqttStatus.textContent = 'Error';
+        mqttStatus.style.color = 'var(--danger)';
+        isMqttConnected = false;
+        updateMqttStatusDisplay();
     }
 }
 
 // Disconnect from MQTT broker
 function disconnectMqtt() {
+    if (mqttReconnectInterval) {
+        clearInterval(mqttReconnectInterval);
+        mqttReconnectInterval = null;
+    }
+    
     if (mqttClient) {
         mqttClient.end();
         mqttClient = null;
@@ -1057,6 +1150,7 @@ function disconnectMqtt() {
     connectMqttBtn.style.display = 'inline-block';
     disconnectMqttBtn.style.display = 'none';
     localStorage.setItem('arsenesMqttStatus', 'disconnected');
+    updateMqttStatusDisplay();
 }
 
 // Add message to MQTT log
@@ -1074,9 +1168,11 @@ function addToMqttLog(message) {
 
 // Process incoming order from MQTT
 function processIncomingOrder(orderData) {
+    if (!orderData || typeof orderData !== 'object') return;
+    
     // Generate a unique ID if not provided
     if (!orderData.id) {
-        orderData.id = Date.now();
+        orderData.id = 'mqtt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
     }
     
     // Set default status if not provided
@@ -1098,7 +1194,9 @@ function processIncomingOrder(orderData) {
         saveToLocalStorage();
         
         // Show notification
-        showNotification(`Pesanan baru dari: ${orderData.customer || 'Pelanggan'}`);
+        const customerName = orderData.customer || 'Pelanggan';
+        const totalAmount = orderData.total ? `Rp ${orderData.total.toLocaleString('id-ID')}` : 'Rp 0';
+        showNotification(`Pesanan baru dari: ${customerName} - ${totalAmount}`);
         
         // Update orders list if in admin mode
         if (isAdminMode) {
@@ -1118,6 +1216,13 @@ function processIncomingOrder(orderData) {
 
 // Publish order to MQTT
 function publishOrder(order) {
+    if (!order || typeof order !== 'object') return;
+    
+    // Add unique ID for MQTT orders
+    if (!order.id) {
+        order.id = 'order_' + Date.now();
+    }
+    
     if (isMqttConnected && mqttClient) {
         const topic = mqttTopic.value;
         const message = JSON.stringify(order);
@@ -1125,10 +1230,15 @@ function publishOrder(order) {
         mqttClient.publish(topic, message, function(err) {
             if (err) {
                 addToMqttLog('Error publishing: ' + err.message);
+                console.error('MQTT Publish Error:', err);
             } else {
                 addToMqttLog('Pesanan dikirim: ' + message);
+                console.log('MQTT Publish Success:', message);
             }
         });
+    } else {
+        console.warn('MQTT not connected, cannot publish order');
+        addToMqttLog('Error: Tidak terhubung ke broker, pesanan tidak terkirim');
     }
 }
 
@@ -1159,6 +1269,12 @@ saveMqttConfig.addEventListener('click', function() {
     
     localStorage.setItem('arsenesMqttConfig', JSON.stringify(config));
     showNotification('Konfigurasi MQTT disimpan');
+    
+    // Reconnect with new settings
+    if (isMqttConnected) {
+        disconnectMqtt();
+        setTimeout(connectMqtt, 1000);
+    }
 });
 
 // Initialize MQTT when the app starts
@@ -1166,9 +1282,16 @@ initMqtt();
 
 // Add MQTT tab functionality
 const realtimeTab = document.querySelector('.admin-tab[data-tab="realtime"]');
-realtimeTab.addEventListener('click', function() {
-    // Ensure MQTT tab is properly initialized when clicked
-    if (!mqttClient && localStorage.getItem('arsenesMqttStatus') === 'connected') {
-        connectMqtt();
-    }
-});
+if (realtimeTab) {
+    realtimeTab.addEventListener('click', function() {
+        // Ensure MQTT tab is properly initialized when clicked
+        if (!mqttClient && localStorage.getItem('arsenesMqttStatus') === 'connected') {
+            connectMqtt();
+        }
+    });
+}
+
+// Request notification permission
+if ('Notification' in window) {
+    Notification.requestPermission();
+}
