@@ -292,9 +292,28 @@
             <button class="btn btn-primary" id="closeSuccessModal">Tutup</button>
         </div>
     </div>
+    
+    <!-- MQTT Connection Modal -->
+<div class="modal" id="mqttModal">
+    <div class="modal-content">
+        <h2><i class="fas fa-wifi"></i> Status Koneksi MQTT</h2>
+        <div class="connection-status">
+            <div class="status-indicator" id="mqttStatusIndicator"></div>
+            <span id="mqttStatusText">Menghubungkan...</span>
+        </div>
+        <div class="mqtt-details">
+            <p><strong>Broker:</strong> <span id="mqttBrokerInfo">wss://broker.hivemq.com:8884/mqtt</span></p>
+            <p><strong>Topik:</strong> <span id="mqttTopicInfo">arsenes_kitchen/orders</span></p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" id="mqttReconnectBtn">Coba Hubungkan Kembali</button>
+            <button class="btn btn-secondary" id="mqttCloseBtn">Tutup</button>
+        </div>
+    </div>
+</div>
 
     <!-- MQTT Script -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <script src="script.js"></script>
 </body>
-    </html>
+                    </html>
