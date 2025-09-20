@@ -45,7 +45,7 @@ let menuItems = [
     { id: 40, name: "Oseng kacang", price: 6000, available: true, image: "https://i.postimg.cc/wx1Q0yDB/Oseng-kacang.jpg", description: "" },
     { id: 41, name: "Bakso kuah Boyolali", price: 10000, available: true, image: "https://i.postimg.cc/05mgJ36c/Bakso-kuah-Boyolali.jpg", description: "" },
     { id: 42, name: "Oseng paya muda", price: 6000, available: true, image: "https://i.postimg.cc/Pq61MTxZ/Oseng-paya-muda.jpg", description: "" },
-    { id: 43, name: "Tongseng ayam", price: 15000, available: true, image: "https://i.postimg.cc/HWRd3bZG/Tongseng-ayam.jpghttps://i.postimg.cc/HWRd3bZG/Tongseng-ayam.jpg", description: "" },
+    { id: 43, name: "Tongseng ayam", price: 15000, available: true, image: "https://i.postimg.cc/HWRd3bZG/Tongseng-ayam.jpg", description: "" },
     { id: 44, name: "Semur sayap bumbu banyak", price: 9000, available: true, image: "https://i.postimg.cc/R0QkBHL0/Semur-paha-bumbu-banyak.jpg", description: "" },
     { id: 45, name: "Semur paha bumbu banyak", price: 11000, available: true, image: "https://i.postimg.cc/R0QkBHL0/Semur-paha-bumbu-banyak.jpg", description: "" },
     { id: 46, name: "Oseng soun jamur", price: 6000, available: true, image: "https://i.postimg.cc/sXv76qQL/Oseng-soun-jamur.jpg", description: "" },
@@ -137,6 +137,27 @@ const closeSuccessModal = document.getElementById('closeSuccessModal');
 const toggleMenuForm = document.getElementById('toggleMenuForm');
 const addMenuForm = document.getElementById('addMenuForm');
 
+// Fungsi untuk menghitung diskon member baru
+function calculateMemberDiscount(subtotal) {
+    if (subtotal < 7000) return 0;
+    if (subtotal >= 7000 && subtotal <= 12000) return 500;
+    if (subtotal >= 13000 && subtotal <= 20000) return 1000;
+    if (subtotal >= 21000 && subtotal <= 29000) return 1500;
+    if (subtotal >= 30000 && subtotal <= 39000) return 2000;
+    if (subtotal >= 40000 && subtotal <= 49000) return 2500;
+    if (subtotal >= 50000 && subtotal <= 59000) return 3000;
+    if (subtotal >= 60000 && subtotal <= 69000) return 3500;
+    if (subtotal >= 70000 && subtotal <= 79000) return 4000;
+    if (subtotal >= 80000 && subtotal <= 89000) return 4500;
+    
+    // Untuk nilai di atas 89000, tambahkan 500 setiap kelipatan 10000
+    if (subtotal >= 90000) {
+        return 4500 + Math.floor((subtotal - 80000) / 10000) * 500;
+    }
+    
+    return 0;
+}
+
 // Initialize the app
 function init() {
     loadFromLocalStorage();
@@ -147,7 +168,6 @@ function init() {
     updateStoreStatus();
     setDefaultReportDates();
     applyTheme();
-    localStorage.removeItem('arsenesMenu');
     
     // Check if we were in admin mode
     if (isAdminMode) {
@@ -191,6 +211,7 @@ function loadFromLocalStorage() {
     const savedTheme = localStorage.getItem('arsenesTheme');
     const savedAdminMode = localStorage.getItem('arsenesAdminMode');
     const savedCart = localStorage.getItem('arsenesCart');
+    const savedMember = localStorage.getItem('arsenesMember');
     
     if (savedMenu) {
         menuItems = JSON.parse(savedMenu);
@@ -217,6 +238,13 @@ function loadFromLocalStorage() {
     if (savedCart) {
         cart = JSON.parse(savedCart);
     }
+    
+    if (savedMember) {
+        isMember = JSON.parse(savedMember);
+        if (isMember) {
+            memberBtn.classList.add('active');
+        }
+    }
 }
 
 // Save data to localStorage
@@ -227,6 +255,7 @@ function saveToLocalStorage() {
     localStorage.setItem('arsenesTheme', JSON.stringify(darkMode));
     localStorage.setItem('arsenesAdminMode', JSON.stringify(isAdminMode));
     localStorage.setItem('arsenesCart', JSON.stringify(cart));
+    localStorage.setItem('arsenesMember', JSON.stringify(isMember));
 }
 
 // Toggle dark/light mode
@@ -319,22 +348,19 @@ function renderMenu() {
         menuList.appendChild(menuItemEl);
     });
     
-    // Add event listeners to add-to-cart buttons - FIXED: Hanya pasang event listener sekali
-    if (!menuList.hasEventListener) {
-        menuList.addEventListener('click', function(e) {
-            if (e.target.classList.contains('add-to-cart')) {
-                const id = parseInt(e.target.dataset.id);
-                const item = menuItems.find(item => item.id === id);
-                
-                if (item && item.available && (storeHours.isOpen || isAdminMode)) {
-                    addToCart(item);
-                } else if (!storeHours.isOpen && !isAdminMode) {
-                    showNotification('Toko sedang tutup. Tidak dapat menambah item ke keranjang.');
-                }
+    // Add event listeners to add-to-cart buttons
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
+            const item = menuItems.find(item => item.id === id);
+            
+            if (item && item.available && (storeHours.isOpen || isAdminMode)) {
+                addToCart(item);
+            } else if (!storeHours.isOpen && !isAdminMode) {
+                showNotification('Toko sedang tutup. Tidak dapat menambah item ke keranjang.');
             }
         });
-        menuList.hasEventListener = true; // Flag untuk menghindari duplikasi
-    }
+    });
 }
 
 // Add item to cart
@@ -386,52 +412,50 @@ function updateCart() {
             cartItems.appendChild(cartItemEl);
         });
         
-        // Add event listeners to quantity buttons - FIXED: Hanya pasang event listener sekali
-        if (!cartItems.hasEventListener) {
-            cartItems.addEventListener('click', function(e) {
-                const target = e.target;
-                const isMinus = target.classList.contains('minus') || (target.parentElement && target.parentElement.classList.contains('minus'));
-                const isPlus = target.classList.contains('plus') || (target.parentElement && target.parentElement.classList.contains('plus'));
-                const isRemove = target.classList.contains('remove-item') || (target.parentElement && target.parentElement.classList.contains('remove-item'));
-                
-                if (isMinus || isPlus || isRemove) {
-                    const id = parseInt(target.dataset.id || (target.parentElement && target.parentElement.dataset.id));
-                    
-                    if (isMinus) {
-                        const item = cart.find(item => item.id === id);
-                        if (item.quantity > 1) {
-                            item.quantity--;
-                        } else {
-                            cart = cart.filter(item => item.id !== id);
-                        }
-                    } else if (isPlus) {
-                        const item = cart.find(item => item.id === id);
-                        item.quantity++;
-                    } else if (isRemove) {
-                        cart = cart.filter(item => item.id !== id);
-                    }
-                    
-                    updateCart();
+        // Add event listeners to quantity buttons
+        document.querySelectorAll('.quantity-btn.minus').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
+                const item = cart.find(item => item.id === id);
+                if (item.quantity > 1) {
+                    item.quantity--;
+                } else {
+                    cart = cart.filter(item => item.id !== id);
                 }
+                updateCart();
             });
-            cartItems.hasEventListener = true; // Flag untuk menghindari duplikasi
-        }
+        });
+        
+        document.querySelectorAll('.quantity-btn.plus').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
+                const item = cart.find(item => item.id === id);
+                item.quantity++;
+                updateCart();
+            });
+        });
+        
+        document.querySelectorAll('.remove-item').forEach(button => {
+            button.addEventListener('click', function() {
+                const id = parseInt(this.dataset.id);
+                cart = cart.filter(item => item.id !== id);
+                updateCart();
+            });
+        });
     }
     
     // Update total
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     subtotalEl.textContent = `Rp ${subtotal.toLocaleString('id-ID')}`;
     
-    // Calculate discount if member and subtotal >= 12000
+    // Calculate discount if member
     let discount = 0;
-    if (isMember && subtotal >= 12000) {
-        discount = subtotal * 0.05;
+    if (isMember) {
+        discount = calculateMemberDiscount(subtotal);
         discountRow.style.display = 'flex';
-        discountAmountEl.textContent = `-Rp ${Math.round(discount).toLocaleString('id-ID')}`;
+        discountAmountEl.textContent = `-Rp ${discount.toLocaleString('id-ID')}`;
     } else {
         discountRow.style.display = 'none';
-        isMember = false;
-        memberBtn.classList.remove('active');
     }
     
     const total = subtotal - discount;
@@ -447,13 +471,14 @@ function toggleMember() {
     
     if (isMember) {
         memberBtn.classList.add('active');
-        showNotification('Diskon member 5% diterapkan (min. pembelian Rp 12.000)');
+        showNotification('Status member diaktifkan. Diskon akan diterapkan sesuai total belanja.');
     } else {
         memberBtn.classList.remove('active');
         showNotification('Status member dinonaktifkan');
     }
     
     updateCart();
+    saveToLocalStorage();
 }
 
 // Update checkout button state
@@ -495,7 +520,7 @@ function checkout() {
     }
     
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const discount = (isMember && subtotal >= 12000) ? subtotal * 0.05 : 0;
+    const discount = isMember ? calculateMemberDiscount(subtotal) : 0;
     const total = subtotal - discount;
     
     const order = {
@@ -515,8 +540,6 @@ function checkout() {
     cart = [];
     customerName.value = '';
     customerPhone.value = '';
-    isMember = false;
-    memberBtn.classList.remove('active');
     
     updateCart();
     saveToLocalStorage();
@@ -548,7 +571,7 @@ function renderOrders() {
                 <div>
                     <div class="order-customer">${order.customer} - ${order.phone}</div>
                     <div>Order #${order.id} - ${new Date(order.timestamp).toLocaleString('id-ID')}</div>
-                    ${order.isMember ? '<div style="color: var(--member); font-weight: bold;">Member (5% discount applied)</div>' : ''}
+                    ${order.isMember ? '<div style="color: var(--member); font-weight: bold;">Member (Discount applied)</div>' : ''}
                 </div>
                 <span class="order-status status-${order.status}">${order.status === 'pending' ? 'Menunggu' : 'Selesai'}</span>
             </div>
@@ -571,40 +594,39 @@ function renderOrders() {
         orderList.appendChild(orderEl);
     });
     
-    // Add event listeners to order action buttons - FIXED: Hanya pasang event listener sekali
-    if (!orderList.hasEventListener) {
-        orderList.addEventListener('click', function(e) {
-            const target = e.target;
-            const isComplete = target.classList.contains('complete-order') || (target.parentElement && target.parentElement.classList.contains('complete-order'));
-            const isCancel = target.classList.contains('cancel-order') || (target.parentElement && target.parentElement.classList.contains('cancel-order'));
-            const isDelete = target.classList.contains('delete-order') || (target.parentElement && target.parentElement.classList.contains('delete-order'));
-            
-            if (isComplete || isCancel || isDelete) {
-                const id = parseInt(target.dataset.id || (target.parentElement && target.parentElement.dataset.id));
-                
-                if (isComplete) {
-                    const order = orders.find(order => order.id === id);
-                    if (order) {
-                        order.status = 'completed';
-                        saveToLocalStorage();
-                        renderOrders();
-                    }
-                } else if (isCancel) {
-                    orders = orders.filter(order => order.id !== id);
-                    saveToLocalStorage();
-                    renderOrders();
-                } else if (isDelete) {
-                    if (confirm('Apakah Anda yakin ingin menghapus pesanan ini?')) {
-                        orders = orders.filter(order => order.id !== id);
-                        saveToLocalStorage();
-                        renderOrders();
-                        showNotification('Pesanan berhasil dihapus');
-                    }
-                }
+    // Add event listeners to order action buttons
+    document.querySelectorAll('.complete-order').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
+            const order = orders.find(order => order.id === id);
+            if (order) {
+                order.status = 'completed';
+                saveToLocalStorage();
+                renderOrders();
             }
         });
-        orderList.hasEventListener = true; // Flag untuk menghindari duplikasi
-    }
+    });
+    
+    document.querySelectorAll('.cancel-order').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
+            orders = orders.filter(order => order.id !== id);
+            saveToLocalStorage();
+            renderOrders();
+        });
+    });
+    
+    document.querySelectorAll('.delete-order').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
+            if (confirm('Apakah Anda yakin ingin menghapus pesanan ini?')) {
+                orders = orders.filter(order => order.id !== id);
+                saveToLocalStorage();
+                renderOrders();
+                showNotification('Pesanan berhasil dihapus');
+            }
+        });
+    });
 }
 
 // Render menu in admin panel
@@ -619,71 +641,63 @@ function renderAdminMenu() {
             <td><input type="text" value="${item.image}" data-id="${item.id}" class="menu-image-input"></td>
             <td><input type="number" value="${item.price}" data-id="${item.id}" class="menu-price-input"></td>
             <td>
-                <button class="edit-menu-btn save-menu" data-id="${item.id}">Simpan</button>
-                <button class="edit-menu-btn delete-menu" data-id="${item.id}">Hapus</button>
+                <button class="btn btn-primary save-menu" data-id="${item.id}">Simpan</button>
+                <button class="btn btn-danger delete-menu" data-id="${item.id}">Hapus</button>
             </td>
         `;
         menuTableBody.appendChild(row);
     });
     
-    // Add event listeners to admin menu controls - FIXED: Hanya pasang event listener sekali
-    if (!menuTableBody.hasChangeListener) {
-        menuTableBody.addEventListener('change', function(e) {
-            if (e.target.classList.contains('availability-checkbox')) {
-                const id = parseInt(e.target.dataset.id);
-                const item = menuItems.find(item => item.id === id);
-                if (item) {
-                    item.available = e.target.checked;
-                    saveToLocalStorage();
-                    renderMenu();
-                }
+    // Add event listeners to admin menu controls
+    document.querySelectorAll('.availability-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const id = parseInt(this.dataset.id);
+            const item = menuItems.find(item => item.id === id);
+            if (item) {
+                item.available = this.checked;
+                saveToLocalStorage();
+                renderMenu();
             }
         });
-        menuTableBody.hasChangeListener = true;
-    }
+    });
     
-    if (!menuTableBody.hasClickListener) {
-        menuTableBody.addEventListener('click', function(e) {
-            const target = e.target;
-            const isSave = target.classList.contains('save-menu') || (target.parentElement && target.parentElement.classList.contains('save-menu'));
-            const isDelete = target.classList.contains('delete-menu') || (target.parentElement && target.parentElement.classList.contains('delete-menu'));
-            
-            if (isSave || isDelete) {
-                const id = parseInt(target.dataset.id || (target.parentElement && target.parentElement.dataset.id));
+    document.querySelectorAll('.save-menu').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
+            const item = menuItems.find(item => item.id === id);
+            if (item) {
+                const nameInput = document.querySelector(`.menu-name-input[data-id="${id}"]`);
+                const imageInput = document.querySelector(`.menu-image-input[data-id="${id}"]`);
+                const priceInput = document.querySelector(`.menu-price-input[data-id="${id}"]`);
                 
-                if (isSave) {
-                    const item = menuItems.find(item => item.id === id);
-                    if (item) {
-                        const nameInput = document.querySelector(`.menu-name-input[data-id="${id}"]`);
-                        const imageInput = document.querySelector(`.menu-image-input[data-id="${id}"]`);
-                        const priceInput = document.querySelector(`.menu-price-input[data-id="${id}"]`);
-                        
-                        if (nameInput.value.trim() !== '') {
-                            item.name = nameInput.value.trim();
-                        }
-                        
-                        if (imageInput.value.trim() !== '') {
-                            item.image = imageInput.value.trim();
-                        }
-                        
-                        item.price = parseInt(priceInput.value) || item.price;
-                        
-                        saveToLocalStorage();
-                        renderMenu();
-                        showNotification('Menu berhasil disimpan');
-                    }
-                } else if (isDelete) {
-                    if (confirm('Apakah Anda yakin ingin menghapus menu ini?')) {
-                        menuItems = menuItems.filter(item => item.id !== id);
-                        saveToLocalStorage();
-                        renderMenu();
-                        renderAdminMenu();
-                    }
+                if (nameInput.value.trim() !== '') {
+                    item.name = nameInput.value.trim();
                 }
+                
+                if (imageInput.value.trim() !== '') {
+                    item.image = imageInput.value.trim();
+                }
+                
+                item.price = parseInt(priceInput.value) || item.price;
+                
+                saveToLocalStorage();
+                renderMenu();
+                showNotification('Menu berhasil disimpan');
             }
         });
-        menuTableBody.hasClickListener = true;
-    }
+    });
+    
+    document.querySelectorAll('.delete-menu').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = parseInt(this.dataset.id);
+            if (confirm('Apakah Anda yakin ingin menghapus menu ini?')) {
+                menuItems = menuItems.filter(item => item.id !== id);
+                saveToLocalStorage();
+                renderMenu();
+                renderAdminMenu();
+            }
+        });
+    });
 }
 
 // Toggle add menu form
@@ -807,7 +821,7 @@ function renderReportOrders(ordersList) {
                 <div>
                     <div class="order-customer">${order.customer} - ${order.phone}</div>
                     <div>Order #${order.id} - ${new Date(order.timestamp).toLocaleString('id-ID')}</div>
-                    ${order.isMember ? '<div style="color: var(--member); font-weight: bold;">Member (5% discount applied)</div>' : ''}
+                    ${order.isMember ? '<div style="color: var(--member); font-weight: bold;">Member (Discount applied)</div>' : ''}
                 </div>
             </div>
             <div>
@@ -937,4 +951,224 @@ newMenuPrice.addEventListener('keypress', function(e) {
 // Initialize the app
 document.addEventListener('DOMContentLoaded', function() {
     init();
+});
+// MQTT Real-time functionality
+let mqttClient = null;
+let isMqttConnected = false;
+
+// DOM elements for MQTT
+const connectMqttBtn = document.getElementById('connectMqttBtn');
+const disconnectMqttBtn = document.getElementById('disconnectMqttBtn');
+const mqttStatus = document.getElementById('mqttStatus');
+const mqttLog = document.getElementById('mqttLog');
+const mqttTopic = document.getElementById('mqttTopic');
+const mqttBroker = document.getElementById('mqttBroker');
+const saveMqttConfig = document.getElementById('saveMqttConfig');
+
+// Initialize MQTT
+function initMqtt() {
+    // Load MQTT config from localStorage
+    const savedMqttConfig = localStorage.getItem('arsenesMqttConfig');
+    if (savedMqttConfig) {
+        const config = JSON.parse(savedMqttConfig);
+        mqttTopic.value = config.topic || 'arsenes_kitchen/orders';
+        mqttBroker.value = config.broker || 'wss://broker.hivemq.com:8884/mqtt';
+    }
+    
+    // Check if we were connected to MQTT
+    const savedMqttStatus = localStorage.getItem('arsenesMqttStatus');
+    if (savedMqttStatus === 'connected') {
+        connectMqtt();
+    }
+}
+
+// Connect to MQTT broker
+function connectMqtt() {
+    const brokerUrl = mqttBroker.value;
+    const topic = mqttTopic.value;
+    
+    try {
+        mqttClient = mqtt.connect(brokerUrl);
+        
+        mqttClient.on('connect', function() {
+            isMqttConnected = true;
+            mqttStatus.textContent = 'Terhubung';
+            mqttStatus.style.color = 'var(--success)';
+            connectMqttBtn.style.display = 'none';
+            disconnectMqttBtn.style.display = 'inline-block';
+            
+            // Subscribe to topic
+            mqttClient.subscribe(topic, function(err) {
+                if (!err) {
+                    addToMqttLog('Terhubung ke broker dan subscribe topik: ' + topic);
+                } else {
+                    addToMqttLog('Error subscribe: ' + err.message);
+                }
+            });
+            
+            localStorage.setItem('arsenesMqttStatus', 'connected');
+        });
+        
+        mqttClient.on('message', function(topic, message) {
+            // message is Buffer
+            const msg = message.toString();
+            addToMqttLog('Pesan diterima: ' + msg);
+            
+            // Try to parse as JSON
+            try {
+                const orderData = JSON.parse(msg);
+                processIncomingOrder(orderData);
+            } catch (e) {
+                // If not JSON, treat as plain text
+                showNotification('Pesanan baru: ' + msg);
+            }
+        });
+        
+        mqttClient.on('error', function(err) {
+            addToMqttLog('Error: ' + err.message);
+            mqttStatus.textContent = 'Error';
+            mqttStatus.style.color = 'var(--danger)';
+        });
+        
+        mqttClient.on('close', function() {
+            addToMqttLog('Koneksi ditutup');
+            isMqttConnected = false;
+            mqttStatus.textContent = 'Terputus';
+            mqttStatus.style.color = 'var(--danger)';
+            connectMqttBtn.style.display = 'inline-block';
+            disconnectMqttBtn.style.display = 'none';
+            localStorage.setItem('arsenesMqttStatus', 'disconnected');
+        });
+        
+    } catch (err) {
+        addToMqttLog('Error koneksi: ' + err.message);
+    }
+}
+
+// Disconnect from MQTT broker
+function disconnectMqtt() {
+    if (mqttClient) {
+        mqttClient.end();
+        mqttClient = null;
+    }
+    isMqttConnected = false;
+    mqttStatus.textContent = 'Terputus';
+    mqttStatus.style.color = 'var(--danger)';
+    connectMqttBtn.style.display = 'inline-block';
+    disconnectMqttBtn.style.display = 'none';
+    localStorage.setItem('arsenesMqttStatus', 'disconnected');
+}
+
+// Add message to MQTT log
+function addToMqttLog(message) {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString();
+    
+    const logEntry = document.createElement('div');
+    logEntry.className = 'log-entry';
+    logEntry.innerHTML = `<span class="log-time">[${timeString}]</span> <span class="log-message">${message}</span>`;
+    
+    mqttLog.appendChild(logEntry);
+    mqttLog.scrollTop = mqttLog.scrollHeight;
+}
+
+// Process incoming order from MQTT
+function processIncomingOrder(orderData) {
+    // Generate a unique ID if not provided
+    if (!orderData.id) {
+        orderData.id = Date.now();
+    }
+    
+    // Set default status if not provided
+    if (!orderData.status) {
+        orderData.status = 'pending';
+    }
+    
+    // Add timestamp if not provided
+    if (!orderData.timestamp) {
+        orderData.timestamp = new Date().toISOString();
+    }
+    
+    // Check if order already exists
+    const existingOrderIndex = orders.findIndex(order => order.id === orderData.id);
+    
+    if (existingOrderIndex === -1) {
+        // Add new order
+        orders.push(orderData);
+        saveToLocalStorage();
+        
+        // Show notification
+        showNotification(`Pesanan baru dari: ${orderData.customer || 'Pelanggan'}`);
+        
+        // Update orders list if in admin mode
+        if (isAdminMode) {
+            renderOrders();
+        }
+    } else {
+        // Update existing order
+        orders[existingOrderIndex] = orderData;
+        saveToLocalStorage();
+        
+        // Update orders list if in admin mode
+        if (isAdminMode) {
+            renderOrders();
+        }
+    }
+}
+
+// Publish order to MQTT
+function publishOrder(order) {
+    if (isMqttConnected && mqttClient) {
+        const topic = mqttTopic.value;
+        const message = JSON.stringify(order);
+        
+        mqttClient.publish(topic, message, function(err) {
+            if (err) {
+                addToMqttLog('Error publishing: ' + err.message);
+            } else {
+                addToMqttLog('Pesanan dikirim: ' + message);
+            }
+        });
+    }
+}
+
+// Modify checkout function to publish order
+const originalCheckout = checkout;
+checkout = function() {
+    const result = originalCheckout.apply(this, arguments);
+    
+    if (result !== false) {
+        // Get the latest order (last one in the array)
+        const latestOrder = orders[orders.length - 1];
+        
+        // Publish the order
+        publishOrder(latestOrder);
+    }
+    
+    return result;
+};
+
+// Event listeners for MQTT
+connectMqttBtn.addEventListener('click', connectMqtt);
+disconnectMqttBtn.addEventListener('click', disconnectMqtt);
+saveMqttConfig.addEventListener('click', function() {
+    const config = {
+        topic: mqttTopic.value,
+        broker: mqttBroker.value
+    };
+    
+    localStorage.setItem('arsenesMqttConfig', JSON.stringify(config));
+    showNotification('Konfigurasi MQTT disimpan');
+});
+
+// Initialize MQTT when the app starts
+initMqtt();
+
+// Add MQTT tab functionality
+const realtimeTab = document.querySelector('.admin-tab[data-tab="realtime"]');
+realtimeTab.addEventListener('click', function() {
+    // Ensure MQTT tab is properly initialized when clicked
+    if (!mqttClient && localStorage.getItem('arsenesMqttStatus') === 'connected') {
+        connectMqtt();
+    }
 });
