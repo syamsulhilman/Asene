@@ -1,3 +1,17 @@
+
+// Ensure MQTT library is available. If mqtt is not defined, dynamically load mqtt.min.js from unpkg.
+function ensureMqttLibrary(callback) {
+    if (typeof mqtt !== 'undefined') {
+        callback();
+        return;
+    }
+    var s = document.createElement('script');
+    s.src = 'https://unpkg.com/mqtt/dist/mqtt.min.js';
+    s.onload = function() { callback(); };
+    s.onerror = function() { console.error('Gagal memuat library MQTT dari CDN.'); addToMqttLog('Gagal memuat MQTT lib'); };
+    document.head.appendChild(s);
+}
+
 // Data initialization
 let cart = [];
 let orders = [];
@@ -518,6 +532,7 @@ function checkout() {
         showNotification('Maaf, toko sedang tutup. Tidak dapat menerima pesanan.');
         return;
     }
+    
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const discount = isMember ? calculateMemberDiscount(subtotal) : 0;
     const total = subtotal - discount;
@@ -646,7 +661,6 @@ function renderAdminMenu() {
         `;
         menuTableBody.appendChild(row);
     });
-    
     // Add event listeners to admin menu controls
     document.querySelectorAll('.availability-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
@@ -932,8 +946,7 @@ adminTabs.forEach(tab => {
         }
     });
 });
-
-// Allow Enter key to submit login form
+                // Allow Enter key to submit login form
 document.getElementById('password').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         login();
@@ -949,37 +962,10 @@ newMenuPrice.addEventListener('keypress', function(e) {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', function() {
-    // Ensure MQTT library then initialize MQTT-related features
-    ensureMqttLibrary(function(){
-        try { if (typeof initMqtt === 'function') initMqtt(); } catch(e) { console.warn('initMqtt error', e); }
-    });
-
+    ensureMqttLibrary(function(){ try{ if (typeof initMqtt === 'function') initMqtt(); setTimeout(function(){ try{ connectMqtt(); } catch(e){} },400); }catch(e){} });
     init();
 });
 // MQTT Real-time functionality - Improved Version
-
-// Ensure MQTT library is available. If mqtt is not defined, dynamically load mqtt.min.js from unpkg.
-function ensureMqttLibrary(callback) {
-    if (typeof mqtt !== 'undefined') {
-        console.log('MQTT library already loaded.');
-        callback();
-        return;
-    }
-    console.log('MQTT library not found, loading dynamically...');
-    var s = document.createElement('script');
-    s.src = 'https://unpkg.com/mqtt/dist/mqtt.min.js';
-    s.onload = function() {
-        console.log('MQTT library loaded dynamically.');
-        callback();
-    };
-    s.onerror = function() {
-        console.error('Gagal memuat library MQTT. Pastikan koneksi internet tersedia atau sertakan mqtt.min.js secara lokal.');
-        addToMqttLog('Gagal memuat library MQTT dari CDN.'); 
-        // show visible status if element exists
-        try { if (mqttStatus) { mqttStatus.textContent = 'MQTT lib error'; mqttStatus.style.color = 'var(--danger)'; } } catch(e){}
-    };
-    document.head.appendChild(s);
-}
 let mqttClient = null;
 let isMqttConnected = false;
 let mqttReconnectInterval = null;
@@ -1024,8 +1010,9 @@ function initMqtt() {
     mqttCloseBtn.addEventListener('click', function() {
         mqttModal.style.display = 'none';
     });
-            }
-    // Show MQTT connection status modal
+}
+
+// Show MQTT connection status modal
 function showMqttStatus() {
     mqttModal.style.display = 'flex';
     updateMqttStatusDisplay();
@@ -1321,4 +1308,103 @@ if (realtimeTab) {
 // Request notification permission
 if ('Notification' in window) {
     Notification.requestPermission();
+}
+
+
+/* --- Server Polling fallback (optional) --- */
+let serverPollIntervalId = null;
+
+function startServerPoll() {
+    const urlEl = document.getElementById('serverPollUrl');
+    const intervalEl = document.getElementById('serverPollInterval');
+    const startBtn = document.getElementById('startServerPollBtn');
+    const stopBtn = document.getElementById('stopServerPollBtn');
+    const statusEl = document.getElementById('serverPollStatus');
+    if (!urlEl || !intervalEl) return;
+    const url = urlEl.value.trim();
+    if (!url) {
+        alert('Masukkan Server Poll URL terlebih dahulu (atau biarkan kosong untuk non-poll).');
+        return;
     }
+    let sec = parseInt(intervalEl.value) || 5;
+    if (sec < 1) sec = 5;
+    // save
+    localStorage.setItem('arsenesServerPollUrl', url);
+    localStorage.setItem('arsenesServerPollInterval', sec.toString());
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+    statusEl.textContent = 'Polling... setiap ' + sec + 's';
+    addToMqttLog('Memulai server poll ke ' + url + ' setiap ' + sec + ' detik');
+
+    // immediate fetch then interval
+    performServerPoll(url);
+    serverPollIntervalId = setInterval(function(){ performServerPoll(url); }, sec * 1000);
+}
+
+function stopServerPoll() {
+    const startBtn = document.getElementById('startServerPollBtn');
+    const stopBtn = document.getElementById('stopServerPollBtn');
+    const statusEl = document.getElementById('serverPollStatus');
+    if (serverPollIntervalId) {
+        clearInterval(serverPollIntervalId);
+        serverPollIntervalId = null;
+    }
+    startBtn.style.display = 'inline-block';
+    stopBtn.style.display = 'none';
+    statusEl.textContent = 'Stopped';
+    addToMqttLog('Polling server dihentikan.');
+    localStorage.removeItem('arsenesServerLastFetch');
+}
+
+async function performServerPoll(url) {
+    try {
+        addToMqttLog('Polling server: ' + url);
+        const resp = await fetch(url, {cache: 'no-store'});
+        if (!resp.ok) {
+            addToMqttLog('Server poll gagal: HTTP ' + resp.status);
+            return;
+        }
+        const data = await resp.json();
+        const arr = Array.isArray(data) ? data : [data];
+        if (!arr.length) return;
+        const lastKey = localStorage.getItem('arsenesServerLastFetch') || '';
+        let newestKey = lastKey;
+        arr.forEach(item => {
+            const key = item.id || item.timestamp || JSON.stringify(item);
+            if (key && key !== lastKey) {
+                processIncomingOrder(item);
+                addToMqttLog('Pesanan baru dari server diambil: ' + (item.id || key));
+                newestKey = key;
+            }
+        });
+        if (newestKey !== lastKey) {
+            localStorage.setItem('arsenesServerLastFetch', newestKey);
+        }
+    } catch (err) {
+        addToMqttLog('Error saat polling server: ' + (err.message || err));
+        console.error('Server poll error', err);
+    }
+}
+
+// Hook buttons if present
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const startBtn = document.getElementById('startServerPollBtn');
+        const stopBtn = document.getElementById('stopServerPollBtn');
+        const urlEl = document.getElementById('serverPollUrl');
+        const intervalEl = document.getElementById('serverPollInterval');
+        if (startBtn && stopBtn && urlEl && intervalEl) {
+            startBtn.addEventListener('click', startServerPoll);
+            stopBtn.addEventListener('click', stopServerPoll);
+            // load saved config
+            const savedUrl = localStorage.getItem('arsenesServerPollUrl') || '';
+            const savedInterval = localStorage.getItem('arsenesServerPollInterval') || '5';
+            urlEl.value = savedUrl;
+            intervalEl.value = savedInterval;
+            if (savedUrl) {
+                setTimeout(function(){ startServerPoll(); }, 800);
+            }
+        }
+    } catch(e){ console.warn('Server poll UI init error', e); }
+});
+            
