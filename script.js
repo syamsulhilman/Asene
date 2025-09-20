@@ -518,7 +518,6 @@ function checkout() {
         showNotification('Maaf, toko sedang tutup. Tidak dapat menerima pesanan.');
         return;
     }
-    
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const discount = isMember ? calculateMemberDiscount(subtotal) : 0;
     const total = subtotal - discount;
@@ -926,7 +925,8 @@ adminTabs.forEach(tab => {
         });
         
         document.getElementById(tabId + 'Content').classList.add('active');
-                // Generate report when switching to reports tab
+        
+        // Generate report when switching to reports tab
         if (tabId === 'reports') {
             generateReport();
         }
@@ -949,9 +949,37 @@ newMenuPrice.addEventListener('keypress', function(e) {
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', function() {
+    // Ensure MQTT library then initialize MQTT-related features
+    ensureMqttLibrary(function(){
+        try { if (typeof initMqtt === 'function') initMqtt(); } catch(e) { console.warn('initMqtt error', e); }
+    });
+
     init();
 });
 // MQTT Real-time functionality - Improved Version
+
+// Ensure MQTT library is available. If mqtt is not defined, dynamically load mqtt.min.js from unpkg.
+function ensureMqttLibrary(callback) {
+    if (typeof mqtt !== 'undefined') {
+        console.log('MQTT library already loaded.');
+        callback();
+        return;
+    }
+    console.log('MQTT library not found, loading dynamically...');
+    var s = document.createElement('script');
+    s.src = 'https://unpkg.com/mqtt/dist/mqtt.min.js';
+    s.onload = function() {
+        console.log('MQTT library loaded dynamically.');
+        callback();
+    };
+    s.onerror = function() {
+        console.error('Gagal memuat library MQTT. Pastikan koneksi internet tersedia atau sertakan mqtt.min.js secara lokal.');
+        addToMqttLog('Gagal memuat library MQTT dari CDN.'); 
+        // show visible status if element exists
+        try { if (mqttStatus) { mqttStatus.textContent = 'MQTT lib error'; mqttStatus.style.color = 'var(--danger)'; } } catch(e){}
+    };
+    document.head.appendChild(s);
+}
 let mqttClient = null;
 let isMqttConnected = false;
 let mqttReconnectInterval = null;
@@ -996,9 +1024,8 @@ function initMqtt() {
     mqttCloseBtn.addEventListener('click', function() {
         mqttModal.style.display = 'none';
     });
-}
-
-// Show MQTT connection status modal
+            }
+    // Show MQTT connection status modal
 function showMqttStatus() {
     mqttModal.style.display = 'flex';
     updateMqttStatusDisplay();
@@ -1294,4 +1321,4 @@ if (realtimeTab) {
 // Request notification permission
 if ('Notification' in window) {
     Notification.requestPermission();
-}
+    }
